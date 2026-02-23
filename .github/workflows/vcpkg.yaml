@@ -76,29 +76,6 @@ jobs:
           sudo apt install -y mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
           sudo apt install -y autoconf autoconf-archive automake libtool
 
-      # installing lavapipe(mesa) on MacOS
-      - name: Installing and register Mac Lavapipe driver
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install mesa
-          brew list mesa
-          echo "VK_DRIVER_FILES=$(brew ls -v mesa | grep 'lvp_icd.aarch64.json')" >> $GITHUB_ENV
-          echo "VK_ICD_FILENAMES=$(brew ls -v mesa | grep 'lvp_icd.aarch64.json')" >> $GITHUB_ENV
-
-      - name: Installing Windows lavapipe driver
-        if: matrix.os == 'windows-latest'
-        uses: jakoch/install-vulkan-sdk-action@v1
-        with:
-          vulkan_version: 1.4.304.0
-          install_runtime: true
-          cache: true
-          install_lavapipe: true
-      - name: register Lavapipe driver on windows
-        if: matrix.os == 'windows-latest'
-        run: |
-         reg add "HKLM\SOFTWARE\Khronos\Vulkan\Drivers" /v "C:\lavapipe\share\vulkan\icd.d\lvp_icd.x86_64.json" /t REG_DWORD /d 0 /f
-         vulkaninfoSDK.exe --summary
-
       #run-cmake@10 cache currently does not work. We have to do this
       #manually, see https://github.com/lukka/run-cmake/issues/152
       - name: Cache vcpkg
