@@ -21,7 +21,7 @@ jobs:
       #       disabled here. Since I only have 2000 minutes per month.
 
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         c_compiler: [gcc, cl, clang]
         include:
           - os: windows-latest
