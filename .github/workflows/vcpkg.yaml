@@ -84,11 +84,11 @@ jobs:
           path: ${{ github.workspace }}/vcpkg_cache
           # some additional file hash can be aded later: 'vcpkg_overlay/**',
           # 'CMakeLists.txt', '**/CMakeLists.txt', but now we just need vcpkg.json
-          key: vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json') }}
+          key: vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ hashFiles('**/vcpkg.json') }}
           ## restore keys seemed to be needed for getting back the caches. See
           ## https://github.com/orgs/community/discussions/27059
           restore-keys: |
-              vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json') }}
+              vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ hashFiles('**/vcpkg.json') }}
               vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-
 
       - name: Setup a new (or from cache) vcpkg (and does not build any package)
