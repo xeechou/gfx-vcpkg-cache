@@ -1,0 +1,20 @@
+{
+  "dependencies": [
+    {
+      "name": "sdl2",
+      "$required features" : "x11,wayland is enabled by default, Vulkan need enable",
+      "features": [ "vulkan" ]
+    },
+    {
+      "name": "glslang",
+      "features": [ "tools"]
+    },
+    "zlib",
+    "glm",
+    "vulkan",
+    {
+      "name": "usd",
+      "features": [ "imaging", "materialx", "openimageio", "vulkan" ]
+    }
+  ]
+}
