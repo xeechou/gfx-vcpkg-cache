@@ -124,3 +124,47 @@ jobs:
           runVcpkgInstall: true
           # The vcpkg.json file, which will be part of cache key computation.
           vcpkgJsonGlob: '**/vcpkg.json'
+
+      - name: Package vcpkg cache
+        shell: bash
+        run: |
+          tar -czf vcpkg-cache-${{ matrix.triplet }}.tar.gz -C ${{ github.workspace }} vcpkg_cache
+
+      - name: Upload vcpkg cache artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcpkg-cache-${{ matrix.triplet }}
+          path: vcpkg-cache-${{ matrix.triplet }}.tar.gz
+          retention-days: 90
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create release tag
+        id: tag
+        run: echo "tag=vcpkg-cache-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "vcpkg cache ${{ steps.tag.outputs.tag }}"
+          body: |
+            Automated vcpkg cache build from commit ${{ github.sha }}.
+
+            Contains pre-built vcpkg packages for:
+            - `x64-windows`
+            - `x64-linux`
+            - `arm64-osx`
+          files: artifacts/*.tar.gz
+          generate_release_notes: false
