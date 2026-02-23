@@ -129,7 +129,7 @@ jobs:
       - name: Package vcpkg cache
         shell: bash
         run: |
-          tar -czf vcpkg-cache-${{ matrix.triplet }}.tar.gz -C ${{ github.workspace }} vcpkg_cache
+          tar -czf vcpkg-cache-${{ matrix.triplet }}.tar.gz -C ${{ github.workspace }}/vcpkg
 
       - name: Upload vcpkg cache artifact
         uses: actions/upload-artifact@v4
