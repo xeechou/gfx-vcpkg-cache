@@ -21,7 +21,7 @@ jobs:
       #       disabled here. Since I only have 2000 minutes per month.
 
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         c_compiler: [gcc, cl, clang]
         include:
           - os: windows-latest
@@ -74,29 +74,7 @@ jobs:
           sudo apt install -y libxcb1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxt-dev
           sudo apt install -y libwayland-dev libxkbcommon-dev libegl1-mesa-dev libibus-1.0-dev
           sudo apt install -y mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
-
-      # installing lavapipe(mesa) on MacOS
-      - name: Installing and register Mac Lavapipe driver
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install mesa
-          brew list mesa
-          echo "VK_DRIVER_FILES=$(brew ls -v mesa | grep 'lvp_icd.aarch64.json')" >> $GITHUB_ENV
-          echo "VK_ICD_FILENAMES=$(brew ls -v mesa | grep 'lvp_icd.aarch64.json')" >> $GITHUB_ENV
-
-      - name: Installing Windows lavapipe driver
-        if: matrix.os == 'windows-latest'
-        uses: jakoch/install-vulkan-sdk-action@v1
-        with:
-          vulkan_version: 1.4.304.0
-          install_runtime: true
-          cache: true
-          install_lavapipe: true
-      - name: register Lavapipe driver on windows
-        if: matrix.os == 'windows-latest'
-        run: |
-         reg add "HKLM\SOFTWARE\Khronos\Vulkan\Drivers" /v "C:\lavapipe\share\vulkan\icd.d\lvp_icd.x86_64.json" /t REG_DWORD /d 0 /f
-         vulkaninfoSDK.exe --summary
+          sudo apt install -y autoconf autoconf-archive automake libtool
 
       #run-cmake@10 cache currently does not work. We have to do this
       #manually, see https://github.com/lukka/run-cmake/issues/152
@@ -106,11 +84,11 @@ jobs:
           path: ${{ github.workspace }}/vcpkg_cache
           # some additional file hash can be aded later: 'vcpkg_overlay/**',
           # 'CMakeLists.txt', '**/CMakeLists.txt', but now we just need vcpkg.json
-          key: vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
+          key: vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ hashFiles('**/vcpkg.json') }}
           ## restore keys seemed to be needed for getting back the caches. See
           ## https://github.com/orgs/community/discussions/27059
           restore-keys: |
-              vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
+              vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ hashFiles('**/vcpkg.json') }}
               vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-
 
       - name: Setup a new (or from cache) vcpkg (and does not build any package)
@@ -124,3 +102,51 @@ jobs:
           runVcpkgInstall: true
           # The vcpkg.json file, which will be part of cache key computation.
           vcpkgJsonGlob: '**/vcpkg.json'
+        env:
+          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
+      # - name: list directory
+      #   shell: bash
+      #   run: ls -la '${{ github.workspace }}/vcpkg_cache'
+
+      - name: Package vcpkg cache
+        shell: bash                                               #quote is needed here for windows
+        run: tar -czf vcpkg-cache-${{ matrix.triplet }}.tar.gz -C '${{ github.workspace }}' vcpkg_cache 
+
+      - name: Upload vcpkg cache artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcpkg-cache-${{ matrix.triplet }}
+          path: vcpkg-cache-${{ matrix.triplet }}.tar.gz
+          retention-days: 90
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create release tag
+        id: tag
+        run: echo "tag=vcpkg-cache-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "vcpkg cache ${{ steps.tag.outputs.tag }}"
+          body: |
+            Automated vcpkg cache build from commit ${{ github.sha }}.
+
+            Contains pre-built vcpkg packages for:
+            - `x64-windows`
+            - `x64-linux`
+            - `arm64-osx`
+          files: artifacts/*.tar.gz
+          generate_release_notes: false
