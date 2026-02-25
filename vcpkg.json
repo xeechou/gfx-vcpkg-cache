@@ -16,5 +16,11 @@
       "name": "usd",
       "features": [ "imaging", "materialx", "openimageio", "vulkan" ]
     }
+  ],
+  "overrides": [
+    {
+      "name": "usd",
+      "version": "25.11"
+    }
   ]
 }
