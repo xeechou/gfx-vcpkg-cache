@@ -126,11 +126,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: vcpkg-cache-${{ matrix.triplet }}
-          path: |
-            vcpkg-cache-${{ matrix.triplet }}.tar.gz
-            vcpkg-installed-${{ matrix.triplet }}.tar.gz
+          path: vcpkg-cache-${{ matrix.triplet }}.tar.gz
           retention-days: 90
 
+      - name: Upload vcpkg installed tree artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcpkg-installed-${{ matrix.triplet }}
+          path: vcpkg-installed-${{ matrix.triplet }}.tar.gz
+          retention-days: 90
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: build-and-test
