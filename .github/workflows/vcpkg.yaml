@@ -65,11 +65,11 @@ jobs:
 
       - name: Linux Platform tools
         if: matrix.os == 'ubuntu-24.04'
-        # required packages on Linux for vcpkg install to succeed
+        # required packages on Linux for vcpkg install to succeed, ubuntu image came with gcc/g++
         run: |
           sudo apt update;
           sudo apt install -y python3 curl zip unzip git
-          sudo apt install -y g++ gcc pkg-config make
+          sudo apt install -y pkg-config make
           sudo apt install -y libtool libltdl-dev ninja-build
           sudo apt install -y libxcb1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxt-dev
           sudo apt install -y libwayland-dev libxkbcommon-dev libegl1-mesa-dev libibus-1.0-dev
