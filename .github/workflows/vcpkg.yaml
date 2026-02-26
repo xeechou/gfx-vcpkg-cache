@@ -109,13 +109,18 @@ jobs:
           vcpkgJsonGlob: '**/vcpkg.json'
         env:
           VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
+          VCPKG_INSTALLED_DIR: '${{ github.workspace }}/vcpkg_installed'
       # - name: list directory
       #   shell: bash
       #   run: ls -la '${{ github.workspace }}/vcpkg_cache'
 
       - name: Package vcpkg cache
         shell: bash                                               #quote is needed here for windows
-        run: tar -czf vcpkg-cache-${{ matrix.triplet }}.tar.gz -C '${{ github.workspace }}' vcpkg_cache 
+        run: tar -czf vcpkg-cache-${{ matrix.triplet }}.tar.gz -C '${{ github.workspace }}' vcpkg_cache
+
+      - name: Package vcpkg installed tree
+        shell: bash
+        run: tar -czf vcpkg-installed-${{ matrix.triplet }}.tar.gz -C '${{ github.workspace }}/vcpkg_installed' '${{ matrix.triplet }}'
 
       - name: Upload vcpkg cache artifact
         uses: actions/upload-artifact@v4
@@ -124,6 +129,12 @@ jobs:
           path: vcpkg-cache-${{ matrix.triplet }}.tar.gz
           retention-days: 90
 
+      - name: Upload vcpkg installed tree artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcpkg-installed-${{ matrix.triplet }}
+          path: vcpkg-installed-${{ matrix.triplet }}.tar.gz
+          retention-days: 90
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: build-and-test
@@ -153,5 +164,9 @@ jobs:
             - `x64-windows`
             - `x64-linux`
             - `arm64-osx`
+
+            Each platform has two archives:
+            - `vcpkg-cache-{triplet}.tar.gz` — binary cache (for vcpkg VCPKG_BINARY_SOURCES)
+            - `vcpkg-installed-{triplet}.tar.gz` — installed tree (for CMAKE_PREFIX_PATH)
           files: artifacts/*.tar.gz
           generate_release_notes: false
