@@ -24,33 +24,33 @@ jobs:
         os: [ubuntu-24.04, windows-2025, macos-15]  #we should fix the os-variant rather than use -latest
         c_compiler: [gcc, cl, clang]
         include:
-          - os: windows-latest
+          - os: windows-2025
             vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
             triplet: 'x64-windows'
             configPreset: 'vcpkg-win32'
             buildPreset:  'vcpkg-win32'
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
             triplet: 'x64-linux'
             configPreset: 'vcpkg'
             buildPreset:  'vcpkg-unix'
-          - os: macos-latest
+          - os: macos-15
             triplet: 'arm64-osx'
             vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
             configPreset: 'vcpkg'
             buildPreset:  'vcpkg-unix'
         exclude:
-          - os: windows-latest
+          - os: windows-2025
             c_compiler: gcc
-          - os: windows-latest
+          - os: windows-2025
             c_compiler: clang
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             c_compiler: cl
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             c_compiler: clang
-          - os: macos-latest
+          - os: macos-15
             c_compiler:  'gcc'
-          - os: macos-latest
+          - os: macos-15
             c_compiler:  'cl'
 
     steps:
@@ -64,7 +64,7 @@ jobs:
         uses: lukka/get-cmake@v3.28.0
 
       - name: Linux Platform tools
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         # required packages on Linux for vcpkg install to succeed
         run: |
           sudo apt update;
