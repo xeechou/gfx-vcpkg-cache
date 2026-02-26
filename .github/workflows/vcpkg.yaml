@@ -21,36 +21,36 @@ jobs:
       #       disabled here. Since I only have 2000 minutes per month.
 
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, windows-2025, macos-15]  #we should fix the os-variant rather than use -latest
         c_compiler: [gcc, cl, clang]
         include:
-          - os: windows-latest
+          - os: windows-2025
             vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
             triplet: 'x64-windows'
             configPreset: 'vcpkg-win32'
             buildPreset:  'vcpkg-win32'
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
             triplet: 'x64-linux'
             configPreset: 'vcpkg'
             buildPreset:  'vcpkg-unix'
-          - os: macos-latest
+          - os: macos-15
             triplet: 'arm64-osx'
             vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
             configPreset: 'vcpkg'
             buildPreset:  'vcpkg-unix'
         exclude:
-          - os: windows-latest
+          - os: windows-2025
             c_compiler: gcc
-          - os: windows-latest
+          - os: windows-2025
             c_compiler: clang
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             c_compiler: cl
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             c_compiler: clang
-          - os: macos-latest
+          - os: macos-15
             c_compiler:  'gcc'
-          - os: macos-latest
+          - os: macos-15
             c_compiler:  'cl'
 
     steps:
@@ -64,12 +64,12 @@ jobs:
         uses: lukka/get-cmake@v3.28.0
 
       - name: Linux Platform tools
-        if: matrix.os == 'ubuntu-latest'
-        # required packages on Linux for vcpkg install to succeed
+        if: matrix.os == 'ubuntu-24.04'
+        # required packages on Linux for vcpkg install to succeed, ubuntu image came with gcc/g++
         run: |
           sudo apt update;
           sudo apt install -y python3 curl zip unzip git
-          sudo apt install -y g++ gcc pkg-config make
+          sudo apt install -y pkg-config make
           sudo apt install -y libtool libltdl-dev ninja-build
           sudo apt install -y libxcb1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxt-dev
           sudo apt install -y libwayland-dev libxkbcommon-dev libegl1-mesa-dev libibus-1.0-dev
@@ -90,11 +90,10 @@ jobs:
           # some additional file hash can be aded later: 'vcpkg_overlay/**',
           # 'CMakeLists.txt', '**/CMakeLists.txt', but now we just need vcpkg.json
           key: vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
-          ## restore keys seemed to be needed for getting back the caches. See
-          ## https://github.com/orgs/community/discussions/27059
+
+          # we want the exact hash, otherwise we might combine multiple cache together, it would way too big
           restore-keys: |
-              vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
-              vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-
+            vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
 
       - name: Setup a new (or from cache) vcpkg (and does not build any package)
         uses: lukka/run-vcpkg@v11 # Always specify the specific _version_ of the
