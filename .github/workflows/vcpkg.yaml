@@ -90,11 +90,10 @@ jobs:
           # some additional file hash can be aded later: 'vcpkg_overlay/**',
           # 'CMakeLists.txt', '**/CMakeLists.txt', but now we just need vcpkg.json
           key: vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
-          ## restore keys seemed to be needed for getting back the caches. See
-          ## https://github.com/orgs/community/discussions/27059
+
+          # we want the exact hash, otherwise we might combine multiple cache together, it would way too big
           restore-keys: |
-              vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
-              vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-
+            vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
 
       - name: Setup a new (or from cache) vcpkg (and does not build any package)
         uses: lukka/run-vcpkg@v11 # Always specify the specific _version_ of the
