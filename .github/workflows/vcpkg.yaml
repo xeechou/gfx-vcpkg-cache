@@ -115,11 +115,11 @@ jobs:
 
       - name: Package vcpkg cache
         shell: bash                                               #quote is needed here for windows
-        run: tar -I 'zstd -19 -T0' -cf vcpkg-cache-${{ matrix.triplet }}.tar.zst -C '${{ github.workspace }}' vcpkg_cache
+        run: tar -cf - -C '${{ github.workspace }}' vcpkg_cache | zstd -19 -T0 -o vcpkg-cache-${{ matrix.triplet }}.tar.zst
 
       - name: Package vcpkg installed tree
         shell: bash
-        run: tar -I 'zstd -19 -T0' -cf vcpkg-installed-${{ matrix.triplet }}.tar.zst -C '${{ github.workspace }}/vcpkg_installed' '${{ matrix.triplet }}'
+        run: tar -cf - -C '${{ github.workspace }}/vcpkg_installed' '${{ matrix.triplet }}' | zstd -19 -T0 -o vcpkg-installed-${{ matrix.triplet }}.tar.zst
 
       - name: Upload vcpkg cache artifact
         uses: actions/upload-artifact@v4
