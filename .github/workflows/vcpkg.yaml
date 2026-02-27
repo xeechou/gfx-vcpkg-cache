@@ -115,24 +115,24 @@ jobs:
 
       - name: Package vcpkg cache
         shell: bash                                               #quote is needed here for windows
-        run: tar -czf vcpkg-cache-${{ matrix.triplet }}.tar.gz -C '${{ github.workspace }}' vcpkg_cache
+        run: tar -cf - -C '${{ github.workspace }}' vcpkg_cache | zstd -19 -T0 -o vcpkg-cache-${{ matrix.triplet }}.tar.zst
 
       - name: Package vcpkg installed tree
         shell: bash
-        run: tar -czf vcpkg-installed-${{ matrix.triplet }}.tar.gz -C '${{ github.workspace }}/vcpkg_installed' '${{ matrix.triplet }}'
+        run: tar -cf - -C '${{ github.workspace }}/vcpkg_installed' '${{ matrix.triplet }}' | zstd -19 -T0 -o vcpkg-installed-${{ matrix.triplet }}.tar.zst
 
       - name: Upload vcpkg cache artifact
         uses: actions/upload-artifact@v4
         with:
           name: vcpkg-cache-${{ matrix.triplet }}
-          path: vcpkg-cache-${{ matrix.triplet }}.tar.gz
+          path: vcpkg-cache-${{ matrix.triplet }}.tar.zst
           retention-days: 90
 
       - name: Upload vcpkg installed tree artifact
         uses: actions/upload-artifact@v4
         with:
           name: vcpkg-installed-${{ matrix.triplet }}
-          path: vcpkg-installed-${{ matrix.triplet }}.tar.gz
+          path: vcpkg-installed-${{ matrix.triplet }}.tar.zst
           retention-days: 90
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -165,7 +165,7 @@ jobs:
             - `arm64-osx`
 
             Each platform has two archives:
-            - `vcpkg-cache-{triplet}.tar.gz` — binary cache (for vcpkg VCPKG_BINARY_SOURCES)
-            - `vcpkg-installed-{triplet}.tar.gz` — installed tree (for CMAKE_PREFIX_PATH)
-          files: artifacts/*.tar.gz
+            - `vcpkg-cache-{triplet}.tar.zst` — binary cache (for vcpkg VCPKG_BINARY_SOURCES)
+            - `vcpkg-installed-{triplet}.tar.zst` — installed tree (for CMAKE_PREFIX_PATH)
+          files: artifacts/*.tar.zst
           generate_release_notes: false
