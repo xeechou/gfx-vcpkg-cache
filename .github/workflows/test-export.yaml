@@ -69,6 +69,7 @@ jobs:
           cmake -B build -S . \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_PREFIX_PATH=${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/installed/${{ matrix.triplet }} \
             -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
 
       - name: Build
