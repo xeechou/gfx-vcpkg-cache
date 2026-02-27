@@ -1,0 +1,85 @@
+name: test-vcpkg-export
+on:
+  workflow_run:
+    workflows: ["vcpkg-ci-build"]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to download (leave empty for latest)'
+        required: false
+        default: ''
+
+jobs:
+  test-export:
+    # Only run if the triggering workflow succeeded, or if manually dispatched
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            triplet: 'x64-linux'
+          - os: windows-2025
+            triplet: 'x64-windows'
+          - os: macos-15
+            triplet: 'arm64-osx'
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Get CMake
+        uses: lukka/get-cmake@v3.28.0
+
+      - name: Linux dependencies
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo apt update
+          sudo apt install -y ninja-build pkg-config
+          sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev
+          sudo apt install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+
+      - name: Download vcpkg export
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.inputs.release_tag }}" ]; then
+            gh release download "${{ github.event.inputs.release_tag }}" \
+              --pattern "vcpkg-export-${{ matrix.triplet }}.tar.zst" \
+              --dir ${{ github.workspace }}
+          else
+            gh release download \
+              --pattern "vcpkg-export-${{ matrix.triplet }}.tar.zst" \
+              --dir ${{ github.workspace }}
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Extract vcpkg export
+        shell: bash
+        run: |
+          zstd -d vcpkg-export-${{ matrix.triplet }}.tar.zst --stdout | \
+            tar -xf - -C ${{ github.workspace }}
+
+      - name: Configure CMake
+        shell: bash
+        run: |
+          cmake -B build -S . \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_PREFIX_PATH=${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/installed/${{ matrix.triplet }} \
+            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Verify executable exists
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" == "windows-2025" ]; then
+            ls -la build/Release/testusd.exe
+          else
+            ls -la build/testusd
+          fi

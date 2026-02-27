@@ -109,17 +109,24 @@ jobs:
         env:
           VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
           VCPKG_INSTALLED_DIR: '${{ github.workspace }}/vcpkg_installed'
-      # - name: list directory
-      #   shell: bash
-      #   run: ls -la '${{ github.workspace }}/vcpkg_cache'
 
+      # keep vcpkg cache for now, if works. Remove this as well.
       - name: Package vcpkg cache
         shell: bash                                               #quote is needed here for windows
         run: tar -cf - -C '${{ github.workspace }}' vcpkg_cache | zstd -19 -T0 -o vcpkg-cache-${{ matrix.triplet }}.tar.zst
 
-      - name: Package vcpkg installed tree
+      - name: Export vcpkg packages (standalone relocatable SDK)
         shell: bash
-        run: tar -cf - -C '${{ github.workspace }}/vcpkg_installed' '${{ matrix.triplet }}' | zstd -19 -T0 -o vcpkg-installed-${{ matrix.triplet }}.tar.zst
+        run: |
+          '${{ github.workspace }}/vcpkg/vcpkg' export \
+            --x-all-installed \
+            --x-install-root='${{ github.workspace }}/vcpkg_installed' \
+            --raw --output-dir='${{ github.workspace }}' \
+            --output=vcpkg-export-${{ matrix.triplet }}
+
+      - name: Package vcpkg export
+        shell: bash
+        run: tar -cf - -C '${{ github.workspace }}' vcpkg-export-${{ matrix.triplet }} | zstd -19 -T0 -o vcpkg-export-${{ matrix.triplet }}.tar.zst
 
       - name: Upload vcpkg cache artifact
         uses: actions/upload-artifact@v4
@@ -128,11 +135,11 @@ jobs:
           path: vcpkg-cache-${{ matrix.triplet }}.tar.zst
           retention-days: 90
 
-      - name: Upload vcpkg installed tree artifact
+      - name: Upload vcpkg export artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vcpkg-installed-${{ matrix.triplet }}
-          path: vcpkg-installed-${{ matrix.triplet }}.tar.zst
+          name: vcpkg-export-${{ matrix.triplet }}
+          path: vcpkg-export-${{ matrix.triplet }}.tar.zst
           retention-days: 90
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
