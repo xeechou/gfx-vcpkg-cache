@@ -53,7 +53,8 @@ jobs:
 
       - name: Extract vcpkg export
         shell: bash
-        run: tar --zstd -xf '${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}.tar.zst' -C '${{ github.workspace }}'
+        working-directory: ${{ github.workspace }}
+        run: tar --zstd -xf vcpkg-export-${{ matrix.triplet }}.tar.zst
 
       - name: Configure CMake
         shell: bash
@@ -61,8 +62,8 @@ jobs:
           cmake -B build -S . -G ${{ matrix.generator }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/scripts/buildsystems/vcpkg.cmake \
-            -DCMAKE_PREFIX_PATH=${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/installed/${{ matrix.triplet }} \
-            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
+            -DCMAKE_PREFIX_PATH=${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/installed/${{ matrix.triplet }}
+
 
       - name: Build
         run: cmake --build build --config Release
