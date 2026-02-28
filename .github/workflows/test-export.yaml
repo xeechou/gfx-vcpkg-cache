@@ -47,7 +47,7 @@ jobs:
         run: |
           gh release download \
             --pattern "vcpkg-export-${{ matrix.triplet }}.tar.zst" \
-            --dir ${{ github.workspace }}
+            --dir "${{ github.workspace }}"
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -66,15 +66,15 @@ jobs:
       - name: Extract vcpkg export
         shell: bash
         working-directory: ${{ github.workspace }}
-        run: tar -axf vcpkg-export-${{ matrix.triplet }}.tar.zst
+        run: tar -axf "vcpkg-export-${{ matrix.triplet }}.tar.zst"
 
       - name: Configure CMake
         shell: bash
         run: |
-          cmake -B build -S . -G ${{ matrix.generator }} \
+          cmake -B build -S . -G "${{ matrix.generator }}" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/scripts/buildsystems/vcpkg.cmake \
-            -DCMAKE_PREFIX_PATH=${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/installed/${{ matrix.triplet }}
+            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/scripts/buildsystems/vcpkg.cmake" \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/installed/${{ matrix.triplet }}"
 
 
       - name: Build
