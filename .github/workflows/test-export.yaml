@@ -73,6 +73,7 @@ jobs:
         run: |
           cmake -B build -S . -G "${{ matrix.generator }}" \
             -DCMAKE_BUILD_TYPE=Release \
+            -DVCPKG_MANIFEST_MODE=OFF \
             -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/scripts/buildsystems/vcpkg.cmake" \
             -DCMAKE_PREFIX_PATH="${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/installed/${{ matrix.triplet }}"
 
