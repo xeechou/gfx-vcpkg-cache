@@ -51,10 +51,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+      - name: Verify downloaded tarball exists
+        shell: bash
+        run: |
+          echo "=== github.workspace = ${{ github.workspace }} ==="
+          echo "=== pwd ==="
+          pwd
+          echo "=== ls -la \${{ github.workspace }} ==="
+          ls -la "${{ github.workspace }}"
+          echo "=== looking for vcpkg-export-${{ matrix.triplet }}.tar.zst ==="
+          ls -la "${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}.tar.zst" || echo "FILE NOT FOUND!"
+          file "${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}.tar.zst" || true
+
       - name: Extract vcpkg export
         shell: bash
         working-directory: ${{ github.workspace }}
-        run: tar --zstd -xf vcpkg-export-${{ matrix.triplet }}.tar.zst
+        run: tar -axf vcpkg-export-${{ matrix.triplet }}.tar.zst
 
       - name: Configure CMake
         shell: bash
