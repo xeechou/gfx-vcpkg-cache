@@ -5,11 +5,6 @@ on:
     types: [completed]
     branches: [master]
   workflow_dispatch:
-    inputs:
-      release_tag:
-        description: 'Release tag to download (leave empty for latest)'
-        required: false
-        default: ''
 
 jobs:
   test-export:
@@ -22,10 +17,13 @@ jobs:
         include:
           - os: ubuntu-24.04
             triplet: 'x64-linux'
+            generator: 'Ninja'
           - os: windows-2025
             triplet: 'x64-windows'
+            generator: 'Visual Studio 17'
           - os: macos-15
             triplet: 'arm64-osx'
+            generator: 'Ninja'
 
     steps:
       - name: Check out branch
@@ -45,28 +43,20 @@ jobs:
       - name: Download vcpkg export
         shell: bash
         run: |
-          if [ -n "${{ github.event.inputs.release_tag }}" ]; then
-            gh release download "${{ github.event.inputs.release_tag }}" \
-              --pattern "vcpkg-export-${{ matrix.triplet }}.tar.zst" \
-              --dir ${{ github.workspace }}
-          else
-            gh release download \
-              --pattern "vcpkg-export-${{ matrix.triplet }}.tar.zst" \
-              --dir ${{ github.workspace }}
-          fi
+          gh release download \
+            --pattern "vcpkg-export-${{ matrix.triplet }}.tar.zst" \
+            --dir ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ github.token }}
 
       - name: Extract vcpkg export
         shell: bash
-        run: |
-          zstd -d vcpkg-export-${{ matrix.triplet }}.tar.zst --stdout | \
-            tar -xf - -C ${{ github.workspace }}
+        run: tar --zstd -xf vcpkg-export-${{ matrix.triplet }}.tar.zst -C ${{ github.workspace }}
 
       - name: Configure CMake
         shell: bash
         run: |
-          cmake -B build -S . \
+          cmake -B build -S . -G ${{ matrix.generator }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/scripts/buildsystems/vcpkg.cmake \
             -DCMAKE_PREFIX_PATH=${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}/installed/${{ matrix.triplet }} \

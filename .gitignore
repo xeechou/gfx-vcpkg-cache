@@ -1,1 +1,3 @@
-vcpkg_install
+vcpkg_install*
+vcpkg-export*
+build/
