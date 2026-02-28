@@ -110,11 +110,6 @@ jobs:
           VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
           VCPKG_INSTALLED_DIR: '${{ github.workspace }}/vcpkg_installed'
 
-      # keep vcpkg cache for now, if works. Remove this as well.
-      - name: Package vcpkg cache
-        shell: bash                                               #quote is needed here for windows
-        run: tar -cf - -C '${{ github.workspace }}' vcpkg_cache | zstd -19 -T0 -o vcpkg-cache-${{ matrix.triplet }}.tar.zst
-
       - name: Export vcpkg packages (standalone relocatable SDK)
         shell: bash
         run: |
@@ -127,13 +122,6 @@ jobs:
       - name: Package vcpkg export
         shell: bash
         run: tar -cf - -C '${{ github.workspace }}' vcpkg-export-${{ matrix.triplet }} | zstd -19 -T0 -o vcpkg-export-${{ matrix.triplet }}.tar.zst
-
-      - name: Upload vcpkg cache artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: vcpkg-cache-${{ matrix.triplet }}
-          path: vcpkg-cache-${{ matrix.triplet }}.tar.zst
-          retention-days: 90
 
       - name: Upload vcpkg export artifact
         uses: actions/upload-artifact@v4
@@ -164,15 +152,14 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: "vcpkg cache ${{ steps.tag.outputs.tag }}"
           body: |
-            Automated vcpkg cache build from commit ${{ github.sha }}.
+            Automated vcpkg export build from commit ${{ github.sha }}.
 
-            Contains pre-built vcpkg packages for:
+            Contains pre-built vcpkg export packages for:
             - `x64-windows`
             - `x64-linux`
             - `arm64-osx`
 
-            Each platform has two archives:
-            - `vcpkg-cache-{triplet}.tar.zst` — binary cache (for vcpkg VCPKG_BINARY_SOURCES)
-            - `vcpkg-installed-{triplet}.tar.zst` — installed tree (for CMAKE_PREFIX_PATH)
+            Each archive (`vcpkg-export-{triplet}.tar.zst`) is a standalone relocatable SDK
+            for use with `CMAKE_TOOLCHAIN_FILE` and `-DVCPKG_MANIFEST_MODE=OFF`.
           files: artifacts/*.tar.zst
           generate_release_notes: false
