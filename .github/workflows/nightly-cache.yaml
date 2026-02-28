@@ -1,0 +1,131 @@
+name: nightly-vcpkg-cache
+on:
+  schedule:
+    # Run at 06:00 UTC every day (10pm PST / 1am EST)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  build-cache:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            triplet: 'x64-linux'
+            vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
+          - os: windows-2025
+            triplet: 'x64-windows'
+            vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
+          - os: macos-15
+            triplet: 'arm64-osx'
+            vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Get CMake
+        uses: lukka/get-cmake@v3.28.0
+
+      - name: Linux platform tools
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo apt update
+          sudo apt install -y python3 curl zip unzip git
+          sudo apt install -y pkg-config make
+          sudo apt install -y libtool libltdl-dev ninja-build
+          sudo apt install -y libxcb1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxt-dev
+          sudo apt install -y libwayland-dev libxkbcommon-dev libegl1-mesa-dev libibus-1.0-dev
+          sudo apt install -y mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
+          sudo apt install -y autoconf autoconf-archive automake libtool
+
+      - name: Hash vcpkg.json
+        id: vcpkg-json-hash
+        shell: bash
+        run: echo "hash=$(sha256sum vcpkg.json | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+
+      - name: Cache vcpkg
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/vcpkg_cache
+          key: vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
+          restore-keys: |
+            vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
+
+      - name: Setup vcpkg and install packages
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+          vcpkgGitCommitId: '${{ matrix.vcpkgCommitId }}'
+          runVcpkgInstall: true
+          vcpkgJsonGlob: '**/vcpkg.json'
+        env:
+          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
+          VCPKG_INSTALLED_DIR: '${{ github.workspace }}/vcpkg_installed'
+
+      - name: Package vcpkg binary cache
+        shell: bash
+        run: tar -cf - -C '${{ github.workspace }}' vcpkg_cache | zstd -19 -T0 -o vcpkg-cache-${{ matrix.triplet }}.tar.zst
+
+      - name: Upload vcpkg cache artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcpkg-cache-${{ matrix.triplet }}
+          path: vcpkg-cache-${{ matrix.triplet }}.tar.zst
+          retention-days: 90
+
+  release:
+    needs: build-cache
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Get timestamp
+        id: timestamp
+        run: echo "datetime=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+
+      - name: Delete existing nightly release (if any)
+        shell: bash
+        run: gh release delete nightly --yes --cleanup-tag 2>/dev/null || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: "Nightly vcpkg cache"
+          prerelease: true
+          body: |
+            Nightly vcpkg binary cache build from `${{ github.sha }}` on ${{ steps.timestamp.outputs.datetime }}.
+
+            Contains pre-built vcpkg binary cache packages for:
+            - `x64-linux`
+            - `x64-windows`
+            - `arm64-osx`
+
+            ## Usage
+
+            Download and extract the cache for your platform, then point vcpkg at it:
+
+            ```bash
+            # Download and extract
+            tar --zstd -xf vcpkg-cache-<triplet>.tar.zst
+
+            # Use as binary source during vcpkg install
+            cmake -B build -S . \
+              -DCMAKE_TOOLCHAIN_FILE=<path-to-vcpkg>/scripts/buildsystems/vcpkg.cmake
+            # with environment variable:
+            #   VCPKG_BINARY_SOURCES="clear;files,$(pwd)/vcpkg_cache,read"
+            ```
+          files: artifacts/*.tar.zst
+          generate_release_notes: false
