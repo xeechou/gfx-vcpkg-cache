@@ -16,6 +16,7 @@
     "zlib",
     "glm",
     "vulkan",
+    "shader-slang",
     {
       "name": "usd",
       "features": [ "imaging", "materialx", "openimageio", "vulkan" ]
@@ -25,6 +26,10 @@
     {
       "name": "usd",
       "version": "25.11"
+    },
+    {
+      "name": "shader-slang",
+      "version": "2026.2"
     }
   ],
   "builtin-baseline": "05442024c3fda64320bd25d2251cc9807b84fb6f"
