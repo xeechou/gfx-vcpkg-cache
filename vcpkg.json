@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "gfx-vcpkg-cache",
   "$version-comment": "The version is imaginary, it is used to invalidate cache key in CI workflow for triplet_abi changes.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "dependencies": [
     {
       "name": "sdl2",
@@ -26,11 +26,11 @@
   "overrides": [
     {
       "name": "usd",
-      "version": "25.11"
+      "version": "26.03"
     },
     {
       "name": "shader-slang",
-      "version": "2026.2"
+      "version": "2026.7.1"
     }
   ],
   "builtin-baseline": "8cef5dcb6d18ec61b37251b509972c1fdf6fc63e"
