@@ -110,6 +110,20 @@ jobs:
           VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
           VCPKG_INSTALLED_DIR: '${{ github.workspace }}/vcpkg_installed'
 
+      - name: Clean vcpkg build artifacts (save disk space)
+        shell: bash
+        run: |
+          echo "Disk usage before cleanup:"
+          df -h .
+          echo "Removing buildtrees, packages, and documentation..."
+          rm -rf '${{ github.workspace }}/vcpkg/buildtrees'
+          rm -rf '${{ github.workspace }}/vcpkg/packages'
+          rm -rf '${{ github.workspace }}/vcpkg/downloads'
+          rm -rf '${{ github.workspace }}/vcpkg_installed/${{ matrix.triplet }}/share/doc'
+          rm -rf '${{ github.workspace }}/vcpkg_installed/${{ matrix.triplet }}/share/man'
+          echo "Disk usage after cleanup:"
+          df -h .
+
       - name: Export vcpkg packages (standalone relocatable SDK)
         shell: bash
         run: |
@@ -129,6 +143,17 @@ jobs:
           name: vcpkg-export-${{ matrix.triplet }}
           path: vcpkg-export-${{ matrix.triplet }}.tar.zst
           retention-days: 90
+
+      - name: Final cleanup (free disk space for subsequent steps)
+        shell: bash
+        run: |
+          echo "Disk usage before final cleanup:"
+          df -h .
+          rm -rf '${{ github.workspace }}/vcpkg-export-${{ matrix.triplet }}'
+          rm -rf '${{ github.workspace }}/vcpkg_installed'
+          rm -rf '${{ github.workspace }}/vcpkg'
+          echo "Disk usage after final cleanup:"
+          df -h .
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: build-and-test
