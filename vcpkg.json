@@ -16,6 +16,7 @@
     "zlib",
     "glm",
     "vulkan",
+    "vulkan-validationlayers",
     "shader-slang",
     {
       "name": "usd",
