@@ -1,0 +1,89 @@
+name: 'Setup vcpkg'
+description: 'Setup vcpkg with caching, install packages, and clean build artifacts'
+
+inputs:
+  triplet:
+    description: 'vcpkg triplet (e.g., x64-linux, x64-windows, arm64-osx)'
+    required: true
+  vcpkg-commit-id:
+    description: 'vcpkg Git commit ID to use (defaults to builtin-baseline from vcpkg.json)'
+    required: false
+    default: ''
+  os:
+    description: 'Runner OS (e.g., ubuntu-24.04, windows-2025, macos-15)'
+    required: true
+
+outputs:
+  vcpkg-root:
+    description: 'Path to vcpkg installation'
+    value: ${{ github.workspace }}/vcpkg
+  vcpkg-installed-dir:
+    description: 'Path to vcpkg installed packages'
+    value: ${{ github.workspace }}/vcpkg_installed
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get CMake
+      uses: lukka/get-cmake@v3.28.0
+
+    - name: Resolve vcpkg commit ID
+      id: resolve-commit
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.vcpkg-commit-id }}" ]; then
+          echo "commit-id=${{ inputs.vcpkg-commit-id }}" >> $GITHUB_OUTPUT
+        else
+          echo "commit-id=$(jq -r '.["builtin-baseline"]' vcpkg.json)" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Linux platform tools
+      if: inputs.os == 'ubuntu-24.04'
+      shell: bash
+      run: |
+        sudo apt update
+        sudo apt install -y python3 curl zip unzip git
+        sudo apt install -y pkg-config make
+        sudo apt install -y libtool libltdl-dev ninja-build
+        sudo apt install -y libxcb1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxt-dev
+        sudo apt install -y libwayland-dev libxkbcommon-dev libegl1-mesa-dev libibus-1.0-dev
+        sudo apt install -y mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
+        sudo apt install -y autoconf autoconf-archive automake libtool
+
+    - name: Hash vcpkg.json
+      id: vcpkg-json-hash
+      shell: bash
+      run: echo "hash=$(sha256sum vcpkg.json | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/vcpkg_cache
+        key: vcpkg-${{ steps.resolve-commit.outputs.commit-id }}-${{ inputs.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
+        restore-keys: |
+          vcpkg-${{ steps.resolve-commit.outputs.commit-id }}-${{ inputs.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
+
+    - name: Setup vcpkg and install packages
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+        vcpkgGitCommitId: '${{ steps.resolve-commit.outputs.commit-id }}'
+        runVcpkgInstall: true
+        vcpkgJsonGlob: '**/vcpkg.json'
+      env:
+        VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
+        VCPKG_INSTALLED_DIR: '${{ github.workspace }}/vcpkg_installed'
+
+    - name: Clean vcpkg build artifacts (save disk space)
+      shell: bash
+      run: |
+        echo "Disk usage before cleanup:"
+        df -h .
+        echo "Removing buildtrees, packages, and downloads..."
+        rm -rf '${{ github.workspace }}/vcpkg/buildtrees'
+        rm -rf '${{ github.workspace }}/vcpkg/packages'
+        rm -rf '${{ github.workspace }}/vcpkg/downloads'
+        rm -rf '${{ github.workspace }}/vcpkg_installed/${{ inputs.triplet }}/share/doc'
+        rm -rf '${{ github.workspace }}/vcpkg_installed/${{ inputs.triplet }}/share/man'
+        echo "Disk usage after cleanup:"
+        df -h .
