@@ -6,8 +6,9 @@ inputs:
     description: 'vcpkg triplet (e.g., x64-linux, x64-windows, arm64-osx)'
     required: true
   vcpkg-commit-id:
-    description: 'vcpkg Git commit ID to use'
-    required: true
+    description: 'vcpkg Git commit ID to use (defaults to builtin-baseline from vcpkg.json)'
+    required: false
+    default: ''
   os:
     description: 'Runner OS (e.g., ubuntu-24.04, windows-2025, macos-15)'
     required: true
@@ -25,6 +26,16 @@ runs:
   steps:
     - name: Get CMake
       uses: lukka/get-cmake@v3.28.0
+
+    - name: Resolve vcpkg commit ID
+      id: resolve-commit
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.vcpkg-commit-id }}" ]; then
+          echo "commit-id=${{ inputs.vcpkg-commit-id }}" >> $GITHUB_OUTPUT
+        else
+          echo "commit-id=$(jq -r '.["builtin-baseline"]' vcpkg.json)" >> $GITHUB_OUTPUT
+        fi
 
     - name: Linux platform tools
       if: inputs.os == 'ubuntu-24.04'
@@ -48,15 +59,15 @@ runs:
       uses: actions/cache@v4
       with:
         path: ${{ github.workspace }}/vcpkg_cache
-        key: vcpkg-${{ inputs.vcpkg-commit-id }}-${{ inputs.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
+        key: vcpkg-${{ steps.resolve-commit.outputs.commit-id }}-${{ inputs.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
         restore-keys: |
-          vcpkg-${{ inputs.vcpkg-commit-id }}-${{ inputs.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
+          vcpkg-${{ steps.resolve-commit.outputs.commit-id }}-${{ inputs.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
 
     - name: Setup vcpkg and install packages
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-        vcpkgGitCommitId: '${{ inputs.vcpkg-commit-id }}'
+        vcpkgGitCommitId: '${{ steps.resolve-commit.outputs.commit-id }}'
         runVcpkgInstall: true
         vcpkgJsonGlob: '**/vcpkg.json'
       env:

@@ -14,13 +14,10 @@ jobs:
         include:
           - os: ubuntu-24.04
             triplet: 'x64-linux'
-            vcpkgCommitId: '8cef5dcb6d18ec61b37251b509972c1fdf6fc63e'
           - os: windows-2025
             triplet: 'x64-windows'
-            vcpkgCommitId: '8cef5dcb6d18ec61b37251b509972c1fdf6fc63e'
           - os: macos-15
             triplet: 'arm64-osx'
-            vcpkgCommitId: '8cef5dcb6d18ec61b37251b509972c1fdf6fc63e'
 
     steps:
       - name: Check out branch
@@ -30,7 +27,6 @@ jobs:
         uses: ./.github/actions/setup-vcpkg
         with:
           triplet: ${{ matrix.triplet }}
-          vcpkg-commit-id: ${{ matrix.vcpkgCommitId }}
           os: ${{ matrix.os }}
 
       - name: Package vcpkg binary cache

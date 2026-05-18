@@ -25,18 +25,15 @@ jobs:
         c_compiler: [gcc, cl, clang]
         include:
           - os: windows-2025
-            vcpkgCommitId: '8cef5dcb6d18ec61b37251b509972c1fdf6fc63e'
             triplet: 'x64-windows'
             configPreset: 'vcpkg-win32'
             buildPreset:  'vcpkg-win32'
           - os: ubuntu-24.04
-            vcpkgCommitId: '8cef5dcb6d18ec61b37251b509972c1fdf6fc63e'
             triplet: 'x64-linux'
             configPreset: 'vcpkg'
             buildPreset:  'vcpkg-unix'
           - os: macos-15
             triplet: 'arm64-osx'
-            vcpkgCommitId: '8cef5dcb6d18ec61b37251b509972c1fdf6fc63e'
             configPreset: 'vcpkg'
             buildPreset:  'vcpkg-unix'
         exclude:
@@ -64,7 +61,6 @@ jobs:
         uses: ./.github/actions/setup-vcpkg
         with:
           triplet: ${{ matrix.triplet }}
-          vcpkg-commit-id: ${{ matrix.vcpkgCommitId }}
           os: ${{ matrix.os }}
 
       - name: Export vcpkg packages (standalone relocatable SDK)
