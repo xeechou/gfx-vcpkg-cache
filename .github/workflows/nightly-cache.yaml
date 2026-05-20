@@ -14,56 +14,20 @@ jobs:
         include:
           - os: ubuntu-24.04
             triplet: 'x64-linux'
-            vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
           - os: windows-2025
             triplet: 'x64-windows'
-            vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
           - os: macos-15
             triplet: 'arm64-osx'
-            vcpkgCommitId: '05442024c3fda64320bd25d2251cc9807b84fb6f'
 
     steps:
       - name: Check out branch
         uses: actions/checkout@v4
 
-      - name: Get CMake
-        uses: lukka/get-cmake@v3.28.0
-
-      - name: Linux platform tools
-        if: matrix.os == 'ubuntu-24.04'
-        run: |
-          sudo apt update
-          sudo apt install -y python3 curl zip unzip git
-          sudo apt install -y pkg-config make
-          sudo apt install -y libtool libltdl-dev ninja-build
-          sudo apt install -y libxcb1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxt-dev
-          sudo apt install -y libwayland-dev libxkbcommon-dev libegl1-mesa-dev libibus-1.0-dev
-          sudo apt install -y mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
-          sudo apt install -y autoconf autoconf-archive automake libtool
-
-      - name: Hash vcpkg.json
-        id: vcpkg-json-hash
-        shell: bash
-        run: echo "hash=$(sha256sum vcpkg.json | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
-
-      - name: Cache vcpkg
-        uses: actions/cache@v4
+      - name: Setup vcpkg
+        uses: ./.github/actions/setup-vcpkg
         with:
-          path: ${{ github.workspace }}/vcpkg_cache
-          key: vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
-          restore-keys: |
-            vcpkg-${{ matrix.vcpkgCommitId }}-${{ matrix.triplet }}-${{ steps.vcpkg-json-hash.outputs.hash }}
-
-      - name: Setup vcpkg and install packages
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-          vcpkgGitCommitId: '${{ matrix.vcpkgCommitId }}'
-          runVcpkgInstall: true
-          vcpkgJsonGlob: '**/vcpkg.json'
-        env:
-          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
-          VCPKG_INSTALLED_DIR: '${{ github.workspace }}/vcpkg_installed'
+          triplet: ${{ matrix.triplet }}
+          os: ${{ matrix.os }}
 
       - name: Package vcpkg binary cache
         shell: bash
@@ -75,6 +39,17 @@ jobs:
           name: vcpkg-cache-${{ matrix.triplet }}
           path: vcpkg-cache-${{ matrix.triplet }}.tar.zst
           retention-days: 90
+
+      - name: Final cleanup (free disk space)
+        shell: bash
+        run: |
+          echo "Disk usage before final cleanup:"
+          df -h .
+          rm -rf '${{ github.workspace }}/vcpkg_cache'
+          rm -rf '${{ github.workspace }}/vcpkg_installed'
+          rm -rf '${{ github.workspace }}/vcpkg'
+          echo "Disk usage after final cleanup:"
+          df -h .
 
   release:
     needs: build-cache
