@@ -1,0 +1,40 @@
+name: 'Setup MSVC'
+description: 'Find Visual Studio via vswhere, run vcvarsall.bat, and export the MSVC environment to GITHUB_ENV/GITHUB_PATH'
+
+inputs:
+  arch:
+    description: 'Target architecture passed to vcvarsall.bat (e.g., x64, x86, arm64)'
+    required: false
+    default: 'x64'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup MSVC environment
+      shell: pwsh
+      run: |
+        $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+        if (-not $vsPath) { Write-Error "Visual Studio not found"; exit 1 }
+        Write-Host "Found VS at: $vsPath"
+        $vcvarsall = Join-Path $vsPath "VC\Auxiliary\Build\vcvarsall.bat"
+
+        $envBefore = @{}
+        Get-ChildItem env: | ForEach-Object { $envBefore[$_.Name] = $_.Value }
+
+        cmd /c "`"$vcvarsall`" ${{ inputs.arch }} >nul 2>&1 && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+                $k = $matches[1]
+                $v = $matches[2]
+                if ($k -ieq 'Path') {
+                    $oldEntries = ($envBefore['Path'] -split ';') | Where-Object { $_ -ne '' }
+                    ($v -split ';') | Where-Object { $_ -ne '' -and $_ -notin $oldEntries } | ForEach-Object {
+                        Add-Content -Path $env:GITHUB_PATH -Value $_
+                    }
+                } elseif (-not $envBefore.ContainsKey($k) -or $envBefore[$k] -ne $v) {
+                    Add-Content -Path $env:GITHUB_ENV -Value "$k=$v"
+                }
+            }
+        }
+        Add-Content -Path $env:GITHUB_ENV -Value "CC=cl"
+        Add-Content -Path $env:GITHUB_ENV -Value "CXX=cl"
+        Write-Host "MSVC ${{ inputs.arch }} environment exported (CC=cl, CXX=cl)"
