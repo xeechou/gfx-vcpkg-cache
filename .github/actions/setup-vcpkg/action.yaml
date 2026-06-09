@@ -37,6 +37,10 @@ runs:
           echo "commit-id=$(jq -r '.["builtin-baseline"]' vcpkg.json)" >> $GITHUB_OUTPUT
         fi
 
+    - name: Setup MSVC environment (Ninja needs cl.exe on PATH)
+      if: contains(inputs.os, 'windows')
+      uses: ./.github/actions/setup-msvc
+
     - name: Linux platform tools
       if: inputs.os == 'ubuntu-24.04'
       shell: bash
@@ -73,6 +77,7 @@ runs:
       env:
         VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
         VCPKG_INSTALLED_DIR: '${{ github.workspace }}/vcpkg_installed'
+        VCPKG_OVERLAY_TRIPLETS: '${{ github.workspace }}/triplets'
 
     - name: Clean vcpkg build artifacts (save disk space)
       shell: bash
