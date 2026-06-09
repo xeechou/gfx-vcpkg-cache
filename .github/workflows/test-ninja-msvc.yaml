@@ -36,7 +36,9 @@ jobs:
                   }
               }
           }
-          Write-Host "MSVC x64 environment exported"
+          Add-Content -Path $env:GITHUB_ENV -Value "CC=cl"
+          Add-Content -Path $env:GITHUB_ENV -Value "CXX=cl"
+          Write-Host "MSVC x64 environment exported (CC=cl, CXX=cl)"
 
       - name: Verify tools are available
         shell: bash
