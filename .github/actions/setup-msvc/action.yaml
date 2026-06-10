@@ -13,15 +13,34 @@ runs:
     - name: Setup MSVC environment
       shell: pwsh
       run: |
-        $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+        $vswhere = Get-Command vswhere -ErrorAction SilentlyContinue |
+                   Select-Object -ExpandProperty Source
+        if (-not $vswhere) {
+            $vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
+        }
+        if (-not (Test-Path $vswhere)) {
+            Write-Error "vswhere not found"; exit 1
+        }
+
+        $vsPath = & $vswhere -latest -property installationPath
         if (-not $vsPath) { Write-Error "Visual Studio not found"; exit 1 }
         Write-Host "Found VS at: $vsPath"
+
         $vcvarsall = Join-Path $vsPath "VC\Auxiliary\Build\vcvarsall.bat"
+        if (-not (Test-Path $vcvarsall)) {
+            Write-Error "vcvarsall.bat not found at: $vcvarsall"; exit 1
+        }
 
         $envBefore = @{}
         Get-ChildItem env: | ForEach-Object { $envBefore[$_.Name] = $_.Value }
 
-        cmd /c "`"$vcvarsall`" ${{ inputs.arch }} >nul 2>&1 && set" | ForEach-Object {
+        $output = cmd /c "`"$vcvarsall`" ${{ inputs.arch }} && set" 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "vcvarsall.bat failed (exit code $LASTEXITCODE):`n$output"
+            exit 1
+        }
+
+        $output | ForEach-Object {
             if ($_ -match '^([^=]+)=(.*)$') {
                 $k = $matches[1]
                 $v = $matches[2]
