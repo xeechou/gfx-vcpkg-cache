@@ -1,0 +1,54 @@
+name: test-ninja-msvc
+on:
+  push:
+    branches: [ninja-msvc]
+  workflow_dispatch:
+
+jobs:
+  hello-world:
+    runs-on: windows-2025
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Get CMake and Ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Setup MSVC environment
+        uses: ./.github/actions/setup-msvc
+
+      - name: Verify tools are available
+        shell: bash
+        run: |
+          echo "=== cl.exe ==="
+          cl 2>&1 | head -1 || echo "cl.exe not found"
+          echo "=== ninja ==="
+          ninja --version
+          echo "=== cmake ==="
+          cmake --version | head -1
+
+      - name: Create hello world
+        shell: bash
+        run: |
+          mkdir hello && cd hello
+          cat > main.cpp << 'EOF'
+          #include <iostream>
+          int main() { std::cout << "Hello from Ninja + MSVC!" << std::endl; return 0; }
+          EOF
+          cat > CMakeLists.txt << 'EOF'
+          cmake_minimum_required(VERSION 3.20)
+          project(hello LANGUAGES CXX)
+          add_executable(hello main.cpp)
+          EOF
+
+      - name: Configure with Ninja
+        shell: bash
+        run: cmake -B hello/build -S hello -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        shell: bash
+        run: cmake --build hello/build
+
+      - name: Run
+        shell: bash
+        run: ./hello/build/hello.exe
