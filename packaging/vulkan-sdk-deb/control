@@ -1,0 +1,12 @@
+This file is retained only as a historical reference for the previous
+monolithic package layout.
+
+Active control templates for the split package build now live under:
+
+  control.d/libvulkan1
+  control.d/libvulkan-dev
+  control.d/vulkan-headers
+  control.d/vulkan-sdk
+
+`build-deb.sh` renders those templates into package-specific `DEBIAN/control`
+files at build time.

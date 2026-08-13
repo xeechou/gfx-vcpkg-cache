@@ -1,0 +1,106 @@
+name: Build Debian Package
+
+# Build split Debian packages from the LunarG Vulkan SDK tarball.
+#
+# Produced packages:
+#   * libvulkan1
+#   * libvulkan-dev
+#   * vulkan-headers
+#   * vulkan-sdk
+#
+# Triggers:
+#   * workflow_dispatch  — manually build any SDK version (inputs below)
+#   * push to master     — rebuild using the checked-in SDK default
+#   * pull_request       — build/verify on PRs targeting `main`
+#   * release            — on published releases, build using the checked-in
+#                          SDK default (or manual input when applicable) and
+#                          attach artifacts only for `vulkan-sdk-*` tags
+#
+# Artifacts: all generated `.deb` files plus `build-info.txt`.
+#
+# The actual Vulkan SDK fetch/build/install/verify logic lives in the reusable
+# composite action `.github/actions/build-vulkan-sdk-debs`, so other graphics
+# package builders can follow the same pattern later.
+
+env:
+  PACKAGE_DIR: packaging/vulkan-sdk-deb
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_version:
+        description: 'Optional LunarG SDK version override (defaults to packaging/vulkan-sdk-deb/SDK_VERSION)'
+        required: false
+        default: ''
+      sdk_url:
+        description: 'Optional full tarball URL (overrides sdk_version)'
+        required: false
+        default: ''
+      arch:
+        description: 'Debian architecture (amd64 supported)'
+        required: false
+        default: 'amd64'
+  push:
+    branches: [master]
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build Vulkan SDK Debian packages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build, install, and verify Vulkan SDK Debian packages
+        id: build-vulkan-sdk-debs
+        uses: ./.github/actions/build-vulkan-sdk-debs
+        with:
+          package-dir: ${{ env.PACKAGE_DIR }}
+          sdk-version: ${{ inputs.sdk_version }}
+          sdk-url: ${{ inputs.sdk_url }}
+          arch: ${{ inputs.arch || 'amd64' }}
+          artifact-dir: ${{ runner.temp }}/artifacts
+
+      - name: Write build-info metadata
+        env:
+          OUT_DIR: ${{ runner.temp }}/artifacts
+          SDK_VERSION: ${{ steps.build-vulkan-sdk-debs.outputs.sdk-version }}
+          SDK_URL: ${{ steps.build-vulkan-sdk-debs.outputs.sdk-url }}
+          TARGET_ARCH: ${{ inputs.arch || 'amd64' }}
+        run: |
+          {
+            echo "sdk_version=${SDK_VERSION}"
+            echo "sdk_url=${SDK_URL}"
+            echo "arch=${TARGET_ARCH}"
+            echo "commit=${GITHUB_SHA}"
+            echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "packages<<EOF"
+            find "$OUT_DIR" -maxdepth 1 -type f -name '*.deb' -printf '%f\n' | sort
+            echo "EOF"
+          } > "$OUT_DIR/build-info.txt"
+          cat "$OUT_DIR/build-info.txt"
+
+      - name: Upload Debian package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vulkan-sdk-debs-${{ steps.build-vulkan-sdk-debs.outputs.sdk-version }}
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/artifacts/*.deb
+            ${{ runner.temp }}/artifacts/build-info.txt
+
+      - name: Attach Debian packages to release
+        if: github.event_name == 'release' && startsWith(github.ref_name, 'vulkan-sdk-')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
+            ${{ runner.temp }}/artifacts/*.deb \
+            ${{ runner.temp }}/artifacts/build-info.txt \
+            --clobber

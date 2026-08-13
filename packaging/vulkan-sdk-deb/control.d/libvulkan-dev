@@ -1,0 +1,12 @@
+Package: libvulkan-dev
+Version: @VERSION@
+Architecture: @ARCH@
+Maintainer: @MAINTAINER@
+Section: graphics
+Priority: optional
+Multi-Arch: same
+Depends: libvulkan1 (= @VERSION@)
+Description: Vulkan loader development files from the LunarG Vulkan SDK
+ This package contains the development symlink and build metadata for the
+ Vulkan loader shipped in the LunarG Vulkan SDK @SDK_VERSION@, including
+ vulkan.pc and VulkanLoader CMake package files.

@@ -1,0 +1,10 @@
+Package: vulkan-headers
+Version: @VERSION@
+Architecture: @ARCH@
+Maintainer: @MAINTAINER@
+Section: graphics
+Priority: optional
+Description: Vulkan header files and API registry from the LunarG Vulkan SDK
+ This package contains the core Vulkan C/C++ headers, vk_video headers,
+ VulkanHeaders CMake metadata, and the Vulkan API registry from the LunarG
+ Vulkan SDK @SDK_VERSION@.
