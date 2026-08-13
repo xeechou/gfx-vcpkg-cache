@@ -11,7 +11,7 @@ name: Build Debian Package
 # Triggers:
 #   * workflow_dispatch  — manually build any SDK version (inputs below)
 #   * push to master     — rebuild using the checked-in SDK default
-#   * pull_request       — build/verify on PRs targeting `main`
+#   * pull_request       — build/verify on PRs targeting `master`
 #   * release            — on published releases, build using the checked-in
 #                          SDK default (or manual input when applicable) and
 #                          attach artifacts only for `vulkan-sdk-*` tags
@@ -43,7 +43,7 @@ on:
   push:
     branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
   release:
     types: [published]
 
