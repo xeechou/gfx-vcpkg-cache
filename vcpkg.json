@@ -15,7 +15,9 @@
     },
     {
       "name": "mesa",
-      "features": ["llvm"]
+      "$note": "windows only; linux/macos use system mesa (apt/brew)",
+      "platform": "windows",
+      "features": [ "llvm", "lavapipe" ]
     },
     "zlib",
     "glm",
