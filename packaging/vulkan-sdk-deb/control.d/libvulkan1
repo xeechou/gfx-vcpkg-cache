@@ -1,0 +1,17 @@
+Package: libvulkan1
+Version: @VERSION@
+Architecture: @ARCH@
+Maintainer: @MAINTAINER@
+Section: graphics
+Priority: optional
+Multi-Arch: same
+Depends: libc6
+Recommends: mesa-vulkan-drivers
+Provides: vulkan-loader
+Replaces: libvulkan-dev (<< 1.1.70+dfsg1-2), vulkan-loader
+Breaks: libvulkan-dev (<< 1.1.70+dfsg1-2), vulkan-loader
+Description: Vulkan loader runtime from the LunarG Vulkan SDK
+ This package contains the Vulkan loader runtime extracted from the LunarG
+ Vulkan SDK @SDK_VERSION@. It installs the loader on the default /usr/lib
+ search path while also providing conventional multiarch compatibility
+ symlinks under /usr/lib/x86_64-linux-gnu.

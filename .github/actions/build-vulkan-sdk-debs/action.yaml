@@ -1,0 +1,101 @@
+name: 'Build Vulkan SDK Debian packages'
+description: 'Download the LunarG Vulkan SDK, build the split Debian packages, install them, and verify with vulkaninfo'
+
+inputs:
+  package-dir:
+    description: 'Path to the Vulkan SDK Debian packaging project'
+    required: true
+  sdk-version:
+    description: 'LunarG SDK version to build (optional; defaults to package-dir/SDK_VERSION)'
+    required: false
+    default: ''
+  sdk-url:
+    description: 'Optional explicit LunarG SDK tarball URL'
+    required: false
+    default: ''
+  arch:
+    description: 'Debian architecture to build'
+    required: false
+    default: 'amd64'
+  artifact-dir:
+    description: 'Directory where built .deb files should be written'
+    required: true
+
+outputs:
+  artifact-dir:
+    description: 'Directory containing the built Debian packages'
+    value: ${{ inputs.artifact-dir }}
+  sdk-version:
+    description: 'Resolved LunarG SDK version used for the build'
+    value: ${{ steps.resolve-sdk.outputs.version }}
+  sdk-url:
+    description: 'Resolved LunarG SDK tarball URL used for the build'
+    value: ${{ steps.resolve-sdk.outputs.url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install build prerequisites
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          fakeroot dpkg-dev xz-utils curl python3 gh mesa-vulkan-drivers
+
+    - name: Resolve SDK version and URL
+      id: resolve-sdk
+      shell: bash
+      working-directory: ${{ inputs.package-dir }}
+      run: |
+        if [ -n "${{ inputs.sdk-version }}" ]; then
+          version="${{ inputs.sdk-version }}"
+        else
+          version="$(tr -d '[:space:]' < SDK_VERSION)"
+        fi
+
+        if [ -n "${{ inputs.sdk-url }}" ]; then
+          url="${{ inputs.sdk-url }}"
+        else
+          url="https://sdk.lunarg.com/sdk/download/${version}/linux/vulkansdk-linux-x86_64-${version}.tar.xz"
+        fi
+
+        echo "version=${version}" >> "$GITHUB_OUTPUT"
+        echo "url=${url}" >> "$GITHUB_OUTPUT"
+
+    - name: Download and extract LunarG SDK
+      shell: bash
+      working-directory: ${{ inputs.package-dir }}
+      env:
+        SDK_VERSION: ${{ steps.resolve-sdk.outputs.version }}
+        SDK_URL: ${{ steps.resolve-sdk.outputs.url }}
+      run: |
+        ./scripts/fetch-sdk.sh
+
+    - name: Build Debian packages
+      shell: bash
+      working-directory: ${{ inputs.package-dir }}
+      env:
+        SDK_VERSION: ${{ steps.resolve-sdk.outputs.version }}
+        SDK_URL: ${{ steps.resolve-sdk.outputs.url }}
+        ARCH: ${{ inputs.arch }}
+        OUT: ${{ inputs.artifact-dir }}
+      run: |
+        mkdir -p "$OUT"
+        ./build-deb.sh
+        ls -lh "$OUT"/*.deb
+
+    - name: Install built Debian packages
+      shell: bash
+      env:
+        ARTIFACT_DIR: ${{ inputs.artifact-dir }}
+      run: |
+        sudo apt-get install -y \
+          "$ARTIFACT_DIR"/libvulkan1_*.deb \
+          "$ARTIFACT_DIR"/libvulkan-dev_*.deb \
+          "$ARTIFACT_DIR"/vulkan-headers_*.deb \
+          "$ARTIFACT_DIR"/vulkan-sdk_*.deb
+
+    - name: Verify Vulkan installation
+      shell: bash
+      run: |
+        vulkaninfo --summary

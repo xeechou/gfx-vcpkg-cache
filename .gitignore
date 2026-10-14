@@ -1,3 +1,8 @@
 vcpkg_install*
 vcpkg-export*
 build/
+
+# Vulkan SDK Debian packaging build outputs
+packaging/vulkan-sdk-deb/stage/
+packaging/vulkan-sdk-deb/*.deb
+packaging/vulkan-sdk-deb/[0-9]*
